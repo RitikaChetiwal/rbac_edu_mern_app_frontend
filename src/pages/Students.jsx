@@ -1,5 +1,23 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import {
+    Users as StudentsIcon,
+    Plus,
+    Search,
+    Edit3,
+    Trash2,
+    X,
+    Phone,
+    MapPin,
+    BookOpen,
+    Calendar,
+    Mail,
+    ChevronLeft,
+    ChevronRight,
+    Filter,
+    User,
+    AlertCircle
+} from 'lucide-react';
 
 const Students = () => {
     const [students, setStudents] = useState([]);
@@ -22,12 +40,10 @@ const Students = () => {
         status: 'Active'
     });
 
-    // added
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [totalStudents, setTotalStudents] = useState(0);
-    // added
 
     const token = localStorage.getItem('token');
 
@@ -46,34 +62,20 @@ const Students = () => {
         'Tech',
         'Non-Tech',
         'Design'
-    ]
+    ];
 
     const hobbies = [
         'Music',
         'Dancing',
         'Painting',
-        'Traveling']
+        'Traveling'
+    ];
 
     const statuses = ['Active', 'Inactive', 'Graduated', 'Dropped'];
 
     useEffect(() => {
         fetchStudents();
     }, [token]);
-
-    // const fetchStudents = async () => {
-    //     try {
-    //         const res = await axios.get('http://localhost:5000/students', {
-    //             headers: { Authorization: `Bearer ${token}` },
-    //         });
-    //         setStudents(res.data);
-    //     } catch (err) {
-    //         if (err.response?.status === 401) {
-    //             localStorage.removeItem('userData');
-    //             localStorage.removeItem('token');
-    //             window.location.href = '/';
-    //         }
-    //     }
-    // };
 
     const fetchStudents = async (page = 1, search = '') => {
         try {
@@ -92,7 +94,6 @@ const Students = () => {
             }
         }
     };
-
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -115,7 +116,6 @@ const Students = () => {
         e.preventDefault();
         try {
             if (isEditMode) {
-                // Update student
                 const res = await axios.put(`http://localhost:5000/students/${editingStudentId}`, formData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -123,7 +123,6 @@ const Students = () => {
                     student._id === editingStudentId ? res.data.student : student
                 ));
             } else {
-                // Add new student
                 const res = await axios.post('http://localhost:5000/students', formData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -213,294 +212,488 @@ const Students = () => {
         fetchStudents(page, searchTerm);
     };
 
+    const getStatusColor = (status) => {
+        switch (status?.toLowerCase()) {
+            case 'active':
+                return 'bg-green-100 text-green-800 border-green-200';
+            case 'inactive':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'graduated':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'dropped':
+                return 'bg-red-100 text-red-800 border-red-200';
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Students</h1>
-                <button
-                    onClick={openAddModal}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-                >
-                    Add Student
-                </button>
-            </div>
-
-            <input
-                type="text"
-                placeholder="Search students by name, email, phone, or course..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="w-full max-w-md mb-4 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-
-            {/* Students Table */}
-            <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-200 mb-6">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border px-4 py-2">Name</th>
-                            <th className="border px-4 py-2">Email</th>
-                            <th className="border px-4 py-2">Phone</th>
-                            <th className="border px-4 py-2">Age</th>
-                            <th className="border px-4 py-2">Course</th>
-                            <th className="border px-4 py-2">Department</th>
-                            <th className="border px-4 py-2">Hobbies</th>
-                            <th className="border px-4 py-2">Status</th>
-                            <th className="border px-4 py-2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {students.map((student) => (
-                            <tr key={student._id}>
-                                <td className="border px-4 py-2">{student.fullName}</td>
-                                <td className="border px-4 py-2">{student.email}</td>
-                                <td className="border px-4 py-2">{student.phone}</td>
-                                <td className="border px-4 py-2">{student.age}</td>
-                                <td className="border px-4 py-2">{student.course}</td>
-                                <td className="border px-4 py-2">{student.department}</td>
-                                <td className="border px-4 py-2">{student.hobbies}</td>
-                                <td className="border px-4 py-2">
-                                    <span className={`px-2 py-1 rounded text-sm ${student.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                        student.status === 'Inactive' ? 'bg-yellow-100 text-yellow-800' :
-                                            student.status === 'Graduated' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-red-100 text-red-800'
-                                        }`}>
-                                        {student.status}
-                                    </span>
-                                </td>
-                                <td className="border px-4 py-2">
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleEdit(student)}
-                                            className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(student._id)}
-                                            className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-gray-600">
-                    Showing {students.length} of {totalStudents} students
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                    >
-                        Previous
-                    </button>
-                    {[...Array(totalPages)].map((_, index) => (
-                        <button
-                            key={index + 1}
-                            onClick={() => handlePageChange(index + 1)}
-                            className={`px-3 py-1 border rounded ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                                }`}
-                        >
-                            {index + 1}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                    >
-                        Next
-                    </button>
-                </div>
-            </div>
-
-
-            {/* Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold">
-                                {isEditMode ? 'Edit Student' : 'Add New Student'}
-                            </h2>
-                            <button
-                                onClick={closeModal}
-                                className="text-gray-500 hover:text-gray-700 text-xl"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input
-                                    type="text"
-                                    name="fullName"
-                                    placeholder="Full Name"
-                                    value={formData.fullName}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="Email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    placeholder="Phone Number"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                                <input
-                                    type="number"
-                                    name="age"
-                                    placeholder="Age"
-                                    min="15"
-                                    max="100"
-                                    value={formData.age}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                                <select
-                                    name="course"
-                                    value={formData.course}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                >
-                                    <option value="">Select Course</option>
-                                    {courses.map(course => (
-                                        <option key={course} value={course}>{course}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    name="department"
-                                    value={formData.department}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                >
-                                    <option value="">Select department</option>
-                                    {department.map(each => (
-                                        <option key={each} value={each}>{each}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    name="hobbies"
-                                    value={formData.hobbies}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                >
-                                    <option value="">Select hobbies</option>
-                                    {hobbies.map(each => (
-                                        <option key={each} value={each}>{each}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    name="gender"
-                                    value={formData.gender}
-                                    onChange={handleChange}
-                                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                >
-                                    <option value="">Select Gender</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
-                                </select>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3 mb-4 sm:mb-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                                <StudentsIcon className="w-6 h-6 text-white" />
                             </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">Students Management</h1>
+                                <p className="text-gray-600">Manage student records and information</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={openAddModal}
+                            className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                        >
+                            <Plus className="w-5 h-5" />
+                            <span className="font-medium">Add Student</span>
+                        </button>
+                    </div>
 
-                            <textarea
-                                name="address"
-                                placeholder="Address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                rows="3"
-                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
-
-                            <div className="border-t pt-4">
-                                <h3 className="text-md font-semibold mb-2">Emergency Contact</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <input
-                                        type="text"
-                                        name="emergencyContact.name"
-                                        placeholder="Contact Name"
-                                        value={formData.emergencyContact.name}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <input
-                                        type="tel"
-                                        name="emergencyContact.phone"
-                                        placeholder="Contact Phone"
-                                        value={formData.emergencyContact.phone}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="emergencyContact.relation"
-                                        placeholder="Relation"
-                                        value={formData.emergencyContact.relation}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Students</p>
+                                    <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <StudentsIcon className="w-6 h-6 text-blue-600" />
                                 </div>
                             </div>
-
-                            <select
-                                name="status"
-                                value={formData.status}
-                                onChange={handleChange}
-                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                {statuses.map(status => (
-                                    <option key={status} value={status}>{status}</option>
-                                ))}
-                            </select>
-
-                            <div className="flex gap-2 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-                                >
-                                    {isEditMode ? 'Update Student' : 'Add Student'}
-                                </button>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Current Page</p>
+                                    <p className="text-2xl font-bold text-gray-900">{currentPage} of {totalPages}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <Filter className="w-6 h-6 text-green-600" />
+                                </div>
                             </div>
-                        </form>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Showing</p>
+                                    <p className="text-2xl font-bold text-gray-900">{students.length}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <User className="w-6 h-6 text-purple-600" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            )}
+
+                {/* Search Bar */}
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search students by name, email, phone, or course..."
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
+                    </div>
+                </div>
+
+                {/* Students Table */}
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <User className="w-4 h-4" />
+                                            <span>Name</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <Mail className="w-4 h-4" />
+                                            <span>Email</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <Phone className="w-4 h-4" />
+                                            <span>Phone</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <Calendar className="w-4 h-4" />
+                                            <span>Age</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <BookOpen className="w-4 h-4" />
+                                            <span>Course</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <MapPin className="w-4 h-4" />
+                                            <span>Status</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {students.map((student) => (
+                                    <tr key={student._id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                                                    <span className="text-white font-semibold text-sm">
+                                                        {student.fullName.charAt(0).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{student.fullName}</p>
+                                                    <p className="text-sm text-gray-500">{student.gender}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.email}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.phone}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.age}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.course}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(student.status)}`}>
+                                                {student.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    onClick={() => handleEdit(student)}
+                                                    className="flex items-center space-x-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+                                                >
+                                                    <Edit3 className="w-4 h-4" />
+                                                    <span>Edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(student._id)}
+                                                    className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span>Delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                            <div className="text-sm text-gray-600 mb-4 sm:mb-0">
+                                Showing <span className="font-semibold">{students.length}</span> of <span className="font-semibold">{totalStudents}</span> students
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                    <span>Previous</span>
+                                </button>
+
+                                <div className="flex space-x-1">
+                                    {[...Array(totalPages)].map((_, index) => (
+                                        <button
+                                            key={index + 1}
+                                            onClick={() => handlePageChange(index + 1)}
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === index + 1
+                                                ? 'bg-blue-600 text-white'
+                                                : 'border border-gray-300 hover:bg-gray-100'
+                                                }`}
+                                        >
+                                            {index + 1}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                                >
+                                    <span>Next</span>
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Modal */}
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all">
+                            {/* Modal Header - Fixed */}
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                                        <User className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-gray-900">
+                                        {isEditMode ? 'Edit Student' : 'Add New Student'}
+                                    </h2>
+                                </div>
+                                <button
+                                    onClick={closeModal}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Scrollable Form Content */}
+                            <form
+                                id="studentForm"
+                                onSubmit={handleSubmit}
+                                className="flex-1 overflow-auto p-6"
+                            >
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                            <input
+                                                type="text"
+                                                name="fullName"
+                                                placeholder="Enter full name"
+                                                value={formData.fullName}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                placeholder="Enter email address"
+                                                value={formData.email}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                placeholder="Enter phone number"
+                                                value={formData.phone}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                                            <input
+                                                type="number"
+                                                name="age"
+                                                placeholder="Enter age"
+                                                min="15"
+                                                max="100"
+                                                value={formData.age}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                                            <select
+                                                name="course"
+                                                value={formData.course}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            >
+                                                <option value="">Select Course</option>
+                                                {courses.map(course => (
+                                                    <option key={course} value={course}>{course}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                            <select
+                                                name="department"
+                                                value={formData.department}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            >
+                                                <option value="">Select Department</option>
+                                                {department.map(each => (
+                                                    <option key={each} value={each}>{each}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Hobbies</label>
+                                            <select
+                                                name="hobbies"
+                                                value={formData.hobbies}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            >
+                                                <option value="">Select Hobbies</option>
+                                                {hobbies.map(each => (
+                                                    <option key={each} value={each}>{each}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                                            <select
+                                                name="gender"
+                                                value={formData.gender}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                required
+                                            >
+                                                <option value="">Select Gender</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                                        <textarea
+                                            name="address"
+                                            placeholder="Enter address"
+                                            value={formData.address}
+                                            onChange={handleChange}
+                                            rows="3"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="border-t pt-6">
+                                        <h3 className="text-md font-semibold mb-4 flex items-center space-x-2">
+                                            <AlertCircle className="w-5 h-5 text-yellow-500" />
+                                            <span>Emergency Contact</span>
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="emergencyContact.name"
+                                                    placeholder="Enter contact name"
+                                                    value={formData.emergencyContact.name}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
+                                                <input
+                                                    type="tel"
+                                                    name="emergencyContact.phone"
+                                                    placeholder="Enter contact phone"
+                                                    value={formData.emergencyContact.phone}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Relation</label>
+                                                <input
+                                                    type="text"
+                                                    name="emergencyContact.relation"
+                                                    placeholder="Enter relation"
+                                                    value={formData.emergencyContact.relation}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                                        <select
+                                            name="status"
+                                            value={formData.status}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        >
+                                            {statuses.map(status => (
+                                                <option key={status} value={status}>{status}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+
+                            {/* Fixed Footer */}
+                            <div className="p-6 border-t border-gray-200">
+                                <div className="flex space-x-3">
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        form="studentForm" // Added form attribute to link to the form
+                                        className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all font-medium"
+                                    >
+                                        {isEditMode ? 'Update Student' : 'Add Student'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
