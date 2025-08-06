@@ -96,10 +96,6 @@ const Profile = ({ user }) => {
                         <h2 className="text-2xl font-bold text-white   mb-4">{userDetails.fullName}</h2>
                         <p className="text-sm text-black-500 ">Last active {userDetails.lastLogin}</p>
                       </div>
-                      <button className="mt-3 sm:mt-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2">
-                        <Edit3 className="w-4 h-4" />
-                        <span>Edit Profile</span>
-                      </button>
                     </div>
                   </div>
                 </div>

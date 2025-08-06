@@ -24,26 +24,34 @@ function App() {
 
   if (!user) return <Login setUser={setUser} />;
 
-  return (
+   return (
     <Router>
       <div className="flex min-h-screen">
         {/* Fixed Sidebar */}
         <div className="fixed top-0 left-0 bottom-0 z-10 w-16">
           <Sidebar role={user?.role} onLogout={handleLogout} />
         </div>
-        
+
         {/* Main Content Area */}
         <div className="ml-68 flex-1 min-h-screen p-4 bg-gray-50">
           <div className="max-w-full">
             <Routes>
               <Route path="/profile" element={<Profile user={user} />} />
-              {user.role === 'admin' && (
+              
+              {/* Routes for admins AND superadmins */}
+              {(user.role === 'admin' || user.role === 'superadmin') && (
                 <>
                   <Route path="/users" element={<Users />} />
                   <Route path="/students" element={<Students />} />
                   <Route path="/chart-data" element={<DepartmentChart />} />
                 </>
               )}
+              
+              {/* Special routes only for superadmin */}
+              {/* {user.role === 'superadmin' && (
+                <Route path="/superadmin" element={<SuperadminPanel />} />
+              )} */}
+              
               <Route path="*" element={<Navigate to="/profile" />} />
             </Routes>
           </div>

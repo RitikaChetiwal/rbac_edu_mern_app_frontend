@@ -18,8 +18,10 @@
     "react-grid-layout": "^1.5.2",
     "react-resizable": "^3.0.5",
     "react-router-dom": "^7.7.1",
+    "react-toastify": "^11.0.5",
     "recharts": "^3.1.0",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

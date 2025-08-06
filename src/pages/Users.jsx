@@ -31,6 +31,8 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [totalUsers, setTotalUsers] = useState(0);
 
+  const [notifications, setNotifications] = useState([]);
+
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -55,32 +57,52 @@ const Users = () => {
     }
   };
 
+  const showNotification = (message, type = 'success') => {
+  const id = Date.now();
+  const newNotification = {
+    id,
+    message,
+    type, // 'success', 'error', 'warning', 'info'
+    timestamp: new Date()
+  };
+  
+  setNotifications(prev => [...prev, newNotification]);
+  
+  // Auto remove notification after 5 seconds
+  setTimeout(() => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, 5000);
+};
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (isEditMode) {
-        // Update user
-        const res = await axios.put(`http://localhost:5000/users/${editingUserId}`, formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(users.map(user => user._id === editingUserId ? res.data.user : user));
-      } else {
-        // Add new user
-        const res = await axios.post('http://localhost:5000/users', formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers([...users, res.data.user]);
-      }
-      closeModal();
-    } catch (err) {
-      console.error('Error submitting form:', err);
-      alert(err.response?.data?.message || 'An error occurred');
+  e.preventDefault();
+  try {
+    if (isEditMode) {
+      // Update user
+      const res = await axios.put(`http://localhost:5000/users/${editingUserId}`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(users.map(user => user._id === editingUserId ? res.data.user : user));
+      showNotification(`User "${formData.fullName}" updated successfully!`, 'success');
+    } else {
+      // Add new user
+      const res = await axios.post('http://localhost:5000/users', formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers([...users, res.data.user]);
+      showNotification(`User "${formData.fullName}" added successfully!`, 'success');
     }
-  };
+    closeModal();
+  } catch (err) {
+    console.error('Error submitting form:', err);
+    const errorMessage = err.response?.data?.message || 'An error occurred';
+    showNotification(errorMessage, 'error');
+  }
+};
 
   const handleEdit = (user) => {
     setIsEditMode(true);
@@ -95,18 +117,22 @@ const Users = () => {
   };
 
   const handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await axios.delete(`http://localhost:5000/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(users.filter(user => user._id !== userId));
-      } catch (err) {
-        console.error('Error deleting user:', err);
-        alert(err.response?.data?.message || 'Failed to delete user');
-      }
+  const userToDelete = users.find(user => user._id === userId);
+  if (window.confirm('Are you sure you want to delete this user?')) {
+    try {
+      await axios.delete(`http://localhost:5000/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(users.filter(user => user._id !== userId));
+      showNotification(`User "${userToDelete?.fullName}" deleted successfully!`, 'success');
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to delete user';
+      showNotification(errorMessage, 'error');
     }
-  };
+  }
+};
+
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -147,8 +173,105 @@ const Users = () => {
     }
   };
 
+  const renderNotifications = () => {
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'success':
+        return <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center">
+          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        </div>;
+      case 'error':
+        return <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center">
+          <X className="w-3 h-3 text-white" />
+        </div>;
+      case 'warning':
+        return <div className="w-5 h-5 rounded-full bg-yellow-600 flex items-center justify-center">
+          <span className="text-white text-xs font-bold">!</span>
+        </div>;
+      case 'info':
+        return <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+          <span className="text-white text-xs font-bold">i</span>
+        </div>;
+      default:
+        return <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center">
+          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        </div>;
+    }
+  };
+
+  const getNotificationColors = (type) => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      case 'info':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+      default:
+        return 'bg-green-50 border-green-200 text-green-800';
+    }
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
+  if (notifications.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`p-4 rounded-lg border shadow-lg transform transition-all duration-300 ease-in-out ${getNotificationColors(notification.type)}`}
+          style={{
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              {getNotificationIcon(notification.type)}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{notification.message}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {notification.timestamp.toLocaleTimeString()}
+              </p>
+            </div>
+            <button
+              onClick={() => removeNotification(notification.id)}
+              className="flex-shrink-0 ml-2 hover:opacity-75"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+      {renderNotifications()}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

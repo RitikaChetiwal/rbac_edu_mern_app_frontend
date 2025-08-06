@@ -16,7 +16,14 @@ import {
     ChevronRight,
     Filter,
     User,
-    AlertCircle
+    AlertCircle,
+    Upload,
+    FileSpreadsheet,
+    Download,
+    CheckCircle,
+    XCircle,
+    Briefcase,
+    Sparkles
 } from 'lucide-react';
 
 const Students = () => {
@@ -24,12 +31,15 @@ const Students = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingStudentId, setEditingStudentId] = useState(null);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
         phone: '',
         age: '',
         course: '',
+        department: '',
+        hobbies: '',
         gender: '',
         address: '',
         emergencyContact: {
@@ -44,6 +54,16 @@ const Students = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [totalStudents, setTotalStudents] = useState(0);
+
+    // Import states
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewData, setPreviewData] = useState(null);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState(null);
+    const [isExporting, setIsExporting] = useState(false);
+
+    const [notifications, setNotifications] = useState([]);
 
     const token = localStorage.getItem('token');
 
@@ -122,18 +142,22 @@ const Students = () => {
                 setStudents(students.map(student =>
                     student._id === editingStudentId ? res.data.student : student
                 ));
+                showNotification(`Student "${formData.fullName}" updated successfully!`, 'success');
             } else {
                 const res = await axios.post('http://localhost:5000/students', formData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStudents([res.data.student, ...students]);
+                showNotification(`Student "${formData.fullName}" added successfully!`, 'success');
             }
             closeModal();
         } catch (err) {
             console.error('Error submitting form:', err);
-            alert(err.response?.data?.message || 'An error occurred');
+            const errorMessage = err.response?.data?.message || 'An error occurred';
+            showNotification(errorMessage, 'error');
         }
     };
+
 
     const handleEdit = (student) => {
         setIsEditMode(true);
@@ -144,6 +168,8 @@ const Students = () => {
             phone: student.phone,
             age: student.age.toString(),
             course: student.course,
+            department: student.department,
+            hobbies: student.hobbies,
             gender: student.gender,
             address: student.address,
             emergencyContact: student.emergencyContact || { name: '', phone: '', relation: '' },
@@ -153,15 +179,18 @@ const Students = () => {
     };
 
     const handleDelete = async (studentId) => {
+        const studentToDelete = students.find(student => student._id === studentId);
         if (window.confirm('Are you sure you want to delete this student?')) {
             try {
                 await axios.delete(`http://localhost:5000/students/${studentId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStudents(students.filter(student => student._id !== studentId));
+                showNotification(`Student "${studentToDelete?.fullName}" deleted successfully!`, 'success');
             } catch (err) {
                 console.error('Error deleting student:', err);
-                alert(err.response?.data?.message || 'Failed to delete student');
+                const errorMessage = err.response?.data?.message || 'Failed to delete student';
+                showNotification(errorMessage, 'error');
             }
         }
     };
@@ -176,6 +205,8 @@ const Students = () => {
             phone: '',
             age: '',
             course: '',
+            department: '',
+            hobbies: '',
             gender: '',
             address: '',
             emergencyContact: { name: '', phone: '', relation: '' },
@@ -192,6 +223,8 @@ const Students = () => {
             phone: '',
             age: '',
             course: '',
+            department: '',
+            hobbies: '',
             gender: '',
             address: '',
             emergencyContact: { name: '', phone: '', relation: '' },
@@ -227,8 +260,253 @@ const Students = () => {
         }
     };
 
+    // Import functions
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewData(null);
+            setImportResult(null);
+        }
+    };
+
+    const handlePreviewExcel = async () => {
+        if (!selectedFile) {
+            alert('Please select a file first');
+            return;
+        }
+
+        setIsPreviewLoading(true);
+        const formData = new FormData();
+        formData.append('excelFile', selectedFile);
+
+        try {
+            const res = await axios.post('http://localhost:5000/students/excel/preview', formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            setPreviewData(res.data);
+        } catch (err) {
+            console.error('Error previewing Excel:', err);
+            alert(err.response?.data?.message || 'Failed to preview Excel file');
+        } finally {
+            setIsPreviewLoading(false);
+        }
+    };
+
+    const handleImportStudents = async () => {
+        if (!previewData || previewData.validRows === 0) {
+            alert('No valid students to import');
+            return;
+        }
+
+        setIsImporting(true);
+        const validStudents = previewData.data.filter(row => row.errors.length === 0);
+
+        try {
+            const res = await axios.post('http://localhost:5000/students/excel/import', {
+                validStudents
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setImportResult(res.data);
+            fetchStudents(); // Refresh the student list
+        } catch (err) {
+            console.error('Error importing students:', err);
+            alert(err.response?.data?.message || 'Failed to import students');
+        } finally {
+            setIsImporting(false);
+        }
+    };
+
+    const closeImportModal = () => {
+        setIsImportModalOpen(false);
+        setSelectedFile(null);
+        setPreviewData(null);
+        setImportResult(null);
+    };
+
+    const downloadTemplate = () => {
+        const template = [
+            {
+                'Full Name': 'John Doe',
+                'Email': 'john.doe@example.com',
+                'Phone': '1234567890',
+                'Age': 20,
+                'Course': 'Computer Science',
+                'Department': 'Tech',
+                'Hobbies': 'Music',
+                'Gender': 'Male',
+                'Address': '123 Main St, City, State',
+                'Status': 'Active',
+                'Emergency Contact Name': 'Jane Doe',
+                'Emergency Contact Phone': '0987654321',
+                'Emergency Contact Relation': 'Mother'
+            }
+        ];
+
+        // Create CSV content
+        const headers = Object.keys(template[0]);
+        const csvContent = [
+            headers.join(','),
+            template.map(row => headers.map(header => `"${row[header]}"`).join(',')).join('\n')
+        ].join('\n');
+
+        // Download
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'student_import_template.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    // Export function
+    const handleExportStudents = async () => {
+        setIsExporting(true);
+        try {
+            const response = await axios.get('http://localhost:5000/students/excel/export', {
+                headers: { Authorization: `Bearer ${token}` },
+                params: {
+                    search: searchTerm,
+                },
+                responseType: 'blob'
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Get filename from response headers or use default
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = 'students_export.xlsx';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error exporting students:', err);
+            alert(err.response?.data?.message || 'Failed to export students');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const showNotification = (message, type = 'success') => {
+        const id = Date.now();
+        const newNotification = {
+            id,
+            message,
+            type, // 'success', 'error', 'warning', 'info'
+            timestamp: new Date()
+        };
+
+        setNotifications(prev => [...prev, newNotification]);
+
+        // Auto remove notification after 5 seconds
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(notification => notification.id !== id));
+        }, 5000);
+    };
+
+    const renderNotifications = () => {
+        const getNotificationIcon = (type) => {
+            switch (type) {
+                case 'success':
+                    return <CheckCircle className="w-5 h-5 text-green-600" />;
+                case 'error':
+                    return <XCircle className="w-5 h-5 text-red-600" />;
+                case 'warning':
+                    return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+                case 'info':
+                    return <AlertCircle className="w-5 h-5 text-blue-600" />;
+                default:
+                    return <CheckCircle className="w-5 h-5 text-green-600" />;
+            }
+        };
+
+        const getNotificationColors = (type) => {
+            switch (type) {
+                case 'success':
+                    return 'bg-green-50 border-green-200 text-green-800';
+                case 'error':
+                    return 'bg-red-50 border-red-200 text-red-800';
+                case 'warning':
+                    return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+                case 'info':
+                    return 'bg-blue-50 border-blue-200 text-blue-800';
+                default:
+                    return 'bg-green-50 border-green-200 text-green-800';
+            }
+        };
+
+        const removeNotification = (id) => {
+            setNotifications(prev => prev.filter(notification => notification.id !== id));
+        };
+
+        if (notifications.length === 0) return null;
+
+        return (
+            <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+                <style>{`
+                    @keyframes slideInRight {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                `}</style>
+                {notifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className={`p-4 rounded-lg border shadow-lg transform transition-all duration-300 ease-in-out ${getNotificationColors(notification.type)}`}
+                        style={{
+                            animation: 'slideInRight 0.3s ease-out'
+                        }}
+                    >
+                        <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0">
+                                {getNotificationIcon(notification.type)}
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium">{notification.message}</p>
+                                <p className="text-xs mt-1 opacity-75">
+                                    {notification.timestamp.toLocaleTimeString()}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => removeNotification(notification.id)}
+                                className="flex-shrink-0 ml-2 hover:opacity-75"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+            {renderNotifications()}
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -242,13 +520,39 @@ const Students = () => {
                                 <p className="text-gray-600">Manage student records and information</p>
                             </div>
                         </div>
-                        <button
-                            onClick={openAddModal}
-                            className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
-                        >
-                            <Plus className="w-5 h-5" />
-                            <span className="font-medium">Add Student</span>
-                        </button>
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={handleExportStudents}
+                                disabled={isExporting}
+                                className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                            >
+                                {isExporting ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                        <span className="font-medium">Exporting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="w-5 h-5" />
+                                        <span className="font-medium">Export Excel</span>
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                            >
+                                <Upload className="w-5 h-5" />
+                                <span className="font-medium">Import Excel</span>
+                            </button>
+                            <button
+                                onClick={openAddModal}
+                                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                            >
+                                <Plus className="w-5 h-5" />
+                                <span className="font-medium">Add Student</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Stats Cards */}
@@ -341,6 +645,18 @@ const Students = () => {
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         <div className="flex items-center space-x-2">
+                                            <Briefcase className="w-4 h-4" />
+                                            <span>Department</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
+                                            <Sparkles className="w-4 h-4" />
+                                            <span>Hobbies</span>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        <div className="flex items-center space-x-2">
                                             <MapPin className="w-4 h-4" />
                                             <span>Status</span>
                                         </div>
@@ -377,6 +693,12 @@ const Students = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-gray-900">{student.course}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.department}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-gray-900">{student.hobbies}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(student.status)}`}>
@@ -451,7 +773,7 @@ const Students = () => {
                     </div>
                 </div>
 
-                {/* Modal */}
+                {/* Add/Edit Student Modal */}
                 {isModalOpen && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all">
@@ -683,12 +1005,294 @@ const Students = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        form="studentForm" // Added form attribute to link to the form
+                                        form="studentForm"
                                         className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all font-medium"
                                     >
                                         {isEditMode ? 'Update Student' : 'Add Student'}
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Import Excel Modal */}
+                {isImportModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col transform transition-all">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
+                                        <FileSpreadsheet className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-gray-900">Import Students from Excel</h2>
+                                </div>
+                                <button
+                                    onClick={closeImportModal}
+                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="flex-1 overflow-auto p-6">
+                                {!previewData && !importResult && (
+                                    <div className="space-y-6">
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div className="flex items-start space-x-3">
+                                                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                                <div>
+                                                    <h3 className="font-semibold text-blue-900">Before importing</h3>
+                                                    <p className="text-blue-700 text-sm mt-1">
+                                                        Please ensure your Excel file has the correct column headers. Download the template below for reference.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-center">
+                                            <button
+                                                onClick={downloadTemplate}
+                                                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span>Download Template</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                            <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose Excel File</h3>
+                                            <p className="text-gray-600 mb-4">Upload your Excel file (.xlsx or .xls)</p>
+                                            <input
+                                                type="file"
+                                                accept=".xlsx,.xls"
+                                                onChange={handleFileSelect}
+                                                className="hidden"
+                                                id="excelFileInput"
+                                            />
+                                            <label
+                                                htmlFor="excelFileInput"
+                                                className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg cursor-pointer transition-colors"
+                                            >
+                                                <Upload className="w-4 h-4" />
+                                                <span>Select File</span>
+                                            </label>
+                                            {selectedFile && (
+                                                <p className="mt-3 text-sm text-gray-600">
+                                                    Selected: {selectedFile.name}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {selectedFile && (
+                                            <div className="flex justify-center">
+                                                <button
+                                                    onClick={handlePreviewExcel}
+                                                    disabled={isPreviewLoading}
+                                                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg transition-colors"
+                                                >
+                                                    {isPreviewLoading ? (
+                                                        <>
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                                            <span>Processing...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Search className="w-4 h-4" />
+                                                            <span>Preview Data</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {previewData && !importResult && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                <div className="flex items-center space-x-3">
+                                                    <FileSpreadsheet className="w-8 h-8 text-blue-600" />
+                                                    <div>
+                                                        <p className="text-2xl font-bold text-blue-900">{previewData.totalRows}</p>
+                                                        <p className="text-blue-700 text-sm">Total Rows</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                <div className="flex items-center space-x-3">
+                                                    <CheckCircle className="w-8 h-8 text-green-600" />
+                                                    <div>
+                                                        <p className="text-2xl font-bold text-green-900">{previewData.validRows}</p>
+                                                        <p className="text-green-700 text-sm">Valid Rows</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                                <div className="flex items-center space-x-3">
+                                                    <XCircle className="w-8 h-8 text-red-600" />
+                                                    <div>
+                                                        <p className="text-2xl font-bold text-red-900">{previewData.invalidRows}</p>
+                                                        <p className="text-red-700 text-sm">Invalid Rows</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                            <div className="overflow-x-auto max-h-96">
+                                                <table className="w-full text-sm">
+                                                    <thead className="bg-gray-50 sticky top-0">
+                                                        <tr>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Row</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Name</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Email</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Phone</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Course</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
+                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Errors</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-200">
+                                                        {previewData.data.map((row, index) => (
+                                                            <tr key={index} className={row.errors.length > 0 ? 'bg-red-50' : 'bg-green-50'}>
+                                                                <td className="px-4 py-3">{row.rowNumber}</td>
+                                                                <td className="px-4 py-3">{row.fullName}</td>
+                                                                <td className="px-4 py-3">{row.email}</td>
+                                                                <td className="px-4 py-3">{row.phone}</td>
+                                                                <td className="px-4 py-3">{row.course}</td>
+                                                                <td className="px-4 py-3">
+                                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(row.status)}`}>
+                                                                        {row.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    {row.errors.length > 0 ? (
+                                                                        <div className="space-y-1">
+                                                                            {row.errors.map((error, errorIndex) => (
+                                                                                <span key={errorIndex} className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
+                                                                                    {error}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center text-green-600">
+                                                                            <CheckCircle className="w-4 h-4" />
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between">
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewData(null);
+                                                    setSelectedFile(null);
+                                                }}
+                                                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                                <span>Back</span>
+                                            </button>
+                                            {previewData.validRows > 0 && (
+                                                <button
+                                                    onClick={handleImportStudents}
+                                                    disabled={isImporting}
+                                                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg transition-colors"
+                                                >
+                                                    {isImporting ? (
+                                                        <>
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                                            <span>Importing...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="w-4 h-4" />
+                                                            <span>Import {previewData.validRows} Students</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {importResult && (
+                                    <div className="space-y-6">
+                                        <div className="text-center">
+                                            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Completed!</h3>
+                                            <p className="text-gray-600">Your Excel data has been processed successfully.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                                                <p className="text-2xl font-bold text-blue-900">{importResult.totalProcessed}</p>
+                                                <p className="text-blue-700 text-sm">Total Processed</p>
+                                            </div>
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                                                <p className="text-2xl font-bold text-green-900">{importResult.successfulImports}</p>
+                                                <p className="text-green-700 text-sm">Successfully Imported</p>
+                                            </div>
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                                                <p className="text-2xl font-bold text-yellow-900">{importResult.duplicateEmails}</p>
+                                                <p className="text-yellow-700 text-sm">Duplicate Emails</p>
+                                            </div>
+                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                                <p className="text-2xl font-bold text-red-900">{importResult.errors}</p>
+                                                <p className="text-red-700 text-sm">Errors</p>
+                                            </div>
+                                        </div>
+
+                                        {importResult.details && (
+                                            <div className="space-y-4">
+                                                {importResult.details.duplicates && importResult.details.duplicates.length > 0 && (
+                                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-yellow-900 mb-2">Duplicate Emails Found:</h4>
+                                                        <div className="space-y-1">
+                                                            {importResult.details.duplicates.map((duplicate, index) => (
+                                                                <p key={index} className="text-yellow-800 text-sm">
+                                                                    {duplicate.fullName} - {duplicate.email}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {importResult.details.errors && importResult.details.errors.length > 0 && (
+                                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-red-900 mb-2">Import Errors:</h4>
+                                                        <div className="space-y-1">
+                                                            {importResult.details.errors.map((error, index) => (
+                                                                <p key={index} className="text-red-800 text-sm">
+                                                                    Row {error.index + 1}: {error.error}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-center">
+                                            <button
+                                                onClick={closeImportModal}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
