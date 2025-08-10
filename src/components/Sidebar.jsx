@@ -24,8 +24,8 @@ const Sidebar = ({ role, onLogout }) => {
   const menuItems = [
     { path: '/profile', label: 'Profile', icon: User, showForAll: true },
     { path: '/users', label: 'Users', icon: Users, adminOnly: true },
-    { path: '/students', label: 'Students', icon: GraduationCap, adminOnly: true },
-    { path: '/chart-data', label: 'Student Stats', icon: BarChart3, adminOnly: true },
+    { path: '/students', label: 'Students', icon: GraduationCap, userOnly: true },
+    { path: '/chart-data', label: 'Student Stats', icon: BarChart3, showForAll: true },
   ];
 
   return (
@@ -49,7 +49,7 @@ const Sidebar = ({ role, onLogout }) => {
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const shouldShow = item.showForAll || (item.adminOnly && role === 'admin');
+          const shouldShow = item.showForAll || (item.adminOnly && role === 'admin') || (item.userOnly && role === 'user');;
           
           if (!shouldShow) return null;
 

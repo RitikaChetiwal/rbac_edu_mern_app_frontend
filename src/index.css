@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+/* Add to your CSS or as a style tag in your component */
+.no-horizontal-scroll {
+    overflow-x: hidden;
+    max-width: 100vw;
+}

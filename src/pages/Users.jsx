@@ -41,7 +41,7 @@ const Users = () => {
 
   const fetchUsers = async (page = 1, search = '') => {
     try {
-      const res = await axios.get(`http://localhost:5000/users/paginated?page=${page}&limit=7&search=${search}`, {
+      const res = await axios.get(`http://localhost:5050/users/paginated?page=${page}&limit=7&search=${search}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data.users);
@@ -83,14 +83,14 @@ const Users = () => {
   try {
     if (isEditMode) {
       // Update user
-      const res = await axios.put(`http://localhost:5000/users/${editingUserId}`, formData, {
+      const res = await axios.put(`http://localhost:5050/users/${editingUserId}`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(users.map(user => user._id === editingUserId ? res.data.user : user));
       showNotification(`User "${formData.fullName}" updated successfully!`, 'success');
     } else {
       // Add new user
-      const res = await axios.post('http://localhost:5000/users', formData, {
+      const res = await axios.post('http://localhost:5050/users', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers([...users, res.data.user]);
@@ -120,7 +120,7 @@ const Users = () => {
   const userToDelete = users.find(user => user._id === userId);
   if (window.confirm('Are you sure you want to delete this user?')) {
     try {
-      await axios.delete(`http://localhost:5000/users/${userId}`, {
+      await axios.delete(`http://localhost:5050/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(users.filter(user => user._id !== userId));

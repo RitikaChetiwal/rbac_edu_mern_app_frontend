@@ -45,9 +45,9 @@ const Chart = () => {
       setLoading(true);
       try {
         const [chartRes, courseRes, ageRes] = await Promise.all([
-          axios.get('http://localhost:5000/charts/chart-data'),
-          axios.get('http://localhost:5000/charts/courseChart'),
-          axios.get('http://localhost:5000/charts/ageChart')
+          axios.get('http://localhost:5050/charts/chart-data'),
+          axios.get('http://localhost:5050/charts/courseChart'),
+          axios.get('http://localhost:5050/charts/ageChart')
         ]);
 
         setChartData(chartRes.data);

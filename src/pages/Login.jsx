@@ -18,7 +18,7 @@ const Login = ({ setUser }) => {
     setError('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const res = await axios.post('http://localhost:5050/api/auth/login', {
         email,
         password
       });
@@ -28,7 +28,7 @@ const Login = ({ setUser }) => {
       setUser(res.data.user);
     } catch (error) {
       console.error('Login failed:', error);
-      setError(error.response?.data?.message || 'Login failed. Please try again.');
+      setError(error.response?.data?.message || 'Login failed 500. Please try again.');
     } finally {
       setLoading(false);
     }

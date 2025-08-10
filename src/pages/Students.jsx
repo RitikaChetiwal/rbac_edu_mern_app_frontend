@@ -1,30 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import {
-    Users as StudentsIcon,
-    Plus,
-    Search,
-    Edit3,
-    Trash2,
-    X,
-    Phone,
-    MapPin,
-    BookOpen,
-    Calendar,
-    Mail,
-    ChevronLeft,
-    ChevronRight,
-    Filter,
-    User,
-    AlertCircle,
-    Upload,
-    FileSpreadsheet,
-    Download,
-    CheckCircle,
-    XCircle,
-    Briefcase,
-    Sparkles
-} from 'lucide-react';
+import { Users as StudentsIcon, Plus, Search, Edit3, Trash2, X, Phone, MapPin, BookOpen, Calendar, Mail, ChevronLeft, ChevronRight, Filter, User, AlertCircle, Upload, FileSpreadsheet, Download, CheckCircle, XCircle, Briefcase, Sparkles } from 'lucide-react';
 
 const Students = () => {
     const [students, setStudents] = useState([]);
@@ -65,6 +41,12 @@ const Students = () => {
 
     const [notifications, setNotifications] = useState([]);
 
+    const [courseFilter, setCourseFilter] = useState('');
+
+
+
+
+
     const token = localStorage.getItem('token');
 
     const courses = [
@@ -94,12 +76,12 @@ const Students = () => {
     const statuses = ['Active', 'Inactive', 'Graduated', 'Dropped'];
 
     useEffect(() => {
-        fetchStudents();
+        fetchStudents(1, '', courseFilter);
     }, [token]);
 
-    const fetchStudents = async (page = 1, search = '') => {
+    const fetchStudents = async (page = 1, search = '', course = '') => {
         try {
-            const res = await axios.get(`http://localhost:5000/students?page=${page}&limit=7&search=${search}`, {
+            const res = await axios.get(`http://localhost:5050/students?page=${page}&limit=7&search=${search}&course=${course}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setStudents(res.data.students);
@@ -113,6 +95,12 @@ const Students = () => {
                 window.location.href = '/';
             }
         }
+    };
+
+    const handleCourseFilter = (course) => {
+        setCourseFilter(course);
+        setCurrentPage(1);
+        fetchStudents(1, searchTerm, course);
     };
 
     const handleChange = (e) => {
@@ -136,7 +124,7 @@ const Students = () => {
         e.preventDefault();
         try {
             if (isEditMode) {
-                const res = await axios.put(`http://localhost:5000/students/${editingStudentId}`, formData, {
+                const res = await axios.put(`http://localhost:5050/students/${editingStudentId}`, formData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStudents(students.map(student =>
@@ -144,7 +132,7 @@ const Students = () => {
                 ));
                 showNotification(`Student "${formData.fullName}" updated successfully!`, 'success');
             } else {
-                const res = await axios.post('http://localhost:5000/students', formData, {
+                const res = await axios.post('http://localhost:5050/students', formData, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStudents([res.data.student, ...students]);
@@ -182,7 +170,7 @@ const Students = () => {
         const studentToDelete = students.find(student => student._id === studentId);
         if (window.confirm('Are you sure you want to delete this student?')) {
             try {
-                await axios.delete(`http://localhost:5000/students/${studentId}`, {
+                await axios.delete(`http://localhost:5050/students/${studentId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStudents(students.filter(student => student._id !== studentId));
@@ -237,12 +225,12 @@ const Students = () => {
         const value = e.target.value;
         setSearchTerm(value);
         setCurrentPage(1);
-        fetchStudents(1, value);
+        fetchStudents(1, value, courseFilter);
     };
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        fetchStudents(page, searchTerm);
+        fetchStudents(page, searchTerm, courseFilter);
     };
 
     const getStatusColor = (status) => {
@@ -281,7 +269,7 @@ const Students = () => {
         formData.append('excelFile', selectedFile);
 
         try {
-            const res = await axios.post('http://localhost:5000/students/excel/preview', formData, {
+            const res = await axios.post('http://localhost:5050/students/excel/preview', formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
@@ -306,14 +294,14 @@ const Students = () => {
         const validStudents = previewData.data.filter(row => row.errors.length === 0);
 
         try {
-            const res = await axios.post('http://localhost:5000/students/excel/import', {
+            const res = await axios.post('http://localhost:5050/students/excel/import', {
                 validStudents
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             setImportResult(res.data);
-            fetchStudents(); // Refresh the student list
+            fetchStudents(1, searchTerm, courseFilter); // Refresh the student list
         } catch (err) {
             console.error('Error importing students:', err);
             alert(err.response?.data?.message || 'Failed to import students');
@@ -369,10 +357,11 @@ const Students = () => {
     const handleExportStudents = async () => {
         setIsExporting(true);
         try {
-            const response = await axios.get('http://localhost:5000/students/excel/export', {
+            const response = await axios.get('http://localhost:5050/students/excel/export', {
                 headers: { Authorization: `Bearer ${token}` },
                 params: {
                     search: searchTerm,
+                    course: courseFilter  // Add this line
                 },
                 responseType: 'blob'
             });
@@ -419,7 +408,7 @@ const Students = () => {
         // Auto remove notification after 5 seconds
         setTimeout(() => {
             setNotifications(prev => prev.filter(notification => notification.id !== id));
-        }, 5000);
+        }, 5050);
     };
 
     const renderNotifications = () => {
@@ -460,7 +449,7 @@ const Students = () => {
         if (notifications.length === 0) return null;
 
         return (
-            <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+            <div className="fixed top-4 right-2 sm:right-4 z-50 space-y-2 w-[calc(100vw-2rem)] max-w-sm">
                 <style>{`
                     @keyframes slideInRight {
                         from {
@@ -505,58 +494,61 @@ const Students = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-2 sm:p-6 no-horizontal-scroll">
+
             {renderNotifications()}
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3 mb-4 sm:mb-0">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
                             <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
                                 <StudentsIcon className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Students Management</h1>
+                                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Students Management</h1>
                                 <p className="text-gray-600">Manage student records and information</p>
                             </div>
                         </div>
-                        <div className="flex space-x-3">
+                        <div className="flex flex-col gap-3 w-full sm:flex-row sm:w-auto">
+
                             <button
                                 onClick={handleExportStudents}
                                 disabled={isExporting}
-                                className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-50 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                             >
                                 {isExporting ? (
                                     <>
                                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                                        <span className="font-medium">Exporting...</span>
+                                        <span className="font-medium text-sm">Exporting...</span>
                                     </>
                                 ) : (
                                     <>
                                         <Download className="w-5 h-5" />
-                                        <span className="font-medium">Export Excel</span>
+                                        <span className="font-medium text-sm">Export Excel</span>
                                     </>
                                 )}
                             </button>
                             <button
                                 onClick={() => setIsImportModalOpen(true)}
-                                className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                             >
                                 <Upload className="w-5 h-5" />
-                                <span className="font-medium">Import Excel</span>
+                                <span className="font-medium text-sm">Import Excel</span>
                             </button>
                             <button
                                 onClick={openAddModal}
-                                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                             >
                                 <Plus className="w-5 h-5" />
-                                <span className="font-medium">Add Student</span>
+                                <span className="font-medium text-sm">Add Student</span>
                             </button>
                         </div>
                     </div>
 
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -593,9 +585,24 @@ const Students = () => {
                     </div>
                 </div>
 
+                {courseFilter && (
+                    <div className="bg-blue-100 border border-blue-200 rounded-lg p-3 mb-6 flex items-center">
+                        <Filter className="w-5 h-5 text-blue-600 mr-2" />
+                        <span className="text-blue-800">
+                            Showing students for: <span className="font-semibold">{courseFilter}</span>
+                            <button
+                                onClick={() => handleCourseFilter('')}
+                                className="ml-2 text-blue-600 cursor-pointer hover:text-blue-800"
+                            >
+                                (Clear filter)
+                            </button>
+                        </span>
+                    </div>
+                )}
+
                 {/* Search Bar */}
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
-                    <div className="relative max-w-md">
+                <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 mb-6 border border-gray-100">
+                    <div className="relative w-full max-w-md mx-auto lg:mx-0">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
@@ -607,9 +614,31 @@ const Students = () => {
                     </div>
                 </div>
 
+                {/* Add this below the search bar */}
+                <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-2">
+
+                    <button
+                        onClick={() => handleCourseFilter('')}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${courseFilter === '' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                        All Courses
+                    </button>
+                    {courses.map(course => (
+                        <button
+                            key={course}
+                            onClick={() => handleCourseFilter(course)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${courseFilter === course ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        >
+                            {course}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Students Table */}
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-                    <div className="overflow-x-auto">
+                    {/* Desktop Table View */}
+                    <div className="hidden lg:block overflow-x-auto min-w-0">
+
                         <table className="w-full">
                             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                                 <tr>
@@ -714,6 +743,7 @@ const Students = () => {
                                                     <Edit3 className="w-4 h-4" />
                                                     <span>Edit</span>
                                                 </button>
+
                                                 <button
                                                     onClick={() => handleDelete(student._id)}
                                                     className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
@@ -721,6 +751,8 @@ const Students = () => {
                                                     <Trash2 className="w-4 h-4" />
                                                     <span>Delete</span>
                                                 </button>
+
+
                                             </div>
                                         </td>
                                     </tr>
@@ -729,24 +761,80 @@ const Students = () => {
                         </table>
                     </div>
 
+                    {/* Mobile Card View */}
+                    <div className="lg:hidden">
+                        {students.map((student) => (
+                            <div key={student._id} className="p-4 border-b border-gray-200 last:border-b-0">
+                                <div className="flex items-start space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="text-white font-semibold text-sm">
+                                            {student.fullName.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="font-semibold text-gray-900 truncate">{student.fullName}</h3>
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(student.status)}`}>
+                                                {student.status}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2 text-sm text-gray-600">
+                                            <div className="flex items-center space-x-2 min-w-0">
+                                                <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                                <span className="truncate min-w-0 break-all text-xs">{student.email}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Phone className="w-4 h-4 text-gray-400" />
+                                                <span>{student.phone}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-2">
+                                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                                    <span>Age: {student.age}</span>
+                                                </div>
+                                                <span className="text-gray-500">{student.gender}</span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <BookOpen className="w-4 h-4 text-gray-400" />
+                                                <span className="truncate">{student.course}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="flex items-center space-x-2">
+                                                    <Briefcase className="w-4 h-4 text-gray-400" />
+                                                    <span className="truncate text-xs">{student.department}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <Sparkles className="w-4 h-4 text-gray-400" />
+                                                    <span className="truncate text-xs">{student.hobbies}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
                     {/* Pagination */}
-                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-                            <div className="text-sm text-gray-600 mb-4 sm:mb-0">
+                    <div className="bg-gray-50 px-4 lg:px-6 py-4 border-t border-gray-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+                            <div className="text-sm text-gray-600 text-center sm:text-left">
                                 Showing <span className="font-semibold">{students.length}</span> of <span className="font-semibold">{totalStudents}</span> students
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center justify-center space-x-2">
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                     className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
-                                    <span>Previous</span>
+                                    <span className="hidden sm:inline">Previous</span>
                                 </button>
 
                                 <div className="flex space-x-1">
-                                    {[...Array(totalPages)].map((_, index) => (
+                                    {[...Array(totalPages)].slice(0, 5).map((_, index) => (
                                         <button
                                             key={index + 1}
                                             onClick={() => handlePageChange(index + 1)}
@@ -758,6 +846,7 @@ const Students = () => {
                                             {index + 1}
                                         </button>
                                     ))}
+                                    {totalPages > 5 && <span className="px-2 py-2 text-gray-500">...</span>}
                                 </div>
 
                                 <button
@@ -765,18 +854,20 @@ const Students = () => {
                                     disabled={currentPage === totalPages}
                                     className="flex items-center space-x-1 px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
                                 >
-                                    <span>Next</span>
+                                    <span className="hidden sm:inline">Next</span>
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     </div>
+
                 </div>
 
                 {/* Add/Edit Student Modal */}
                 {isModalOpen && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl max-h-[95vh] flex flex-col transform transition-all">
+
                             {/* Modal Header - Fixed */}
                             <div className="flex items-center justify-between p-6 border-b border-gray-200">
                                 <div className="flex items-center space-x-3">
@@ -802,7 +893,7 @@ const Students = () => {
                                 className="flex-1 overflow-auto p-6"
                             >
                                 <div className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                                             <input
@@ -940,7 +1031,8 @@ const Students = () => {
                                             <AlertCircle className="w-5 h-5 text-yellow-500" />
                                             <span>Emergency Contact</span>
                                         </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
                                                 <input
@@ -1018,8 +1110,10 @@ const Students = () => {
 
                 {/* Import Excel Modal */}
                 {isImportModalOpen && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col transform transition-all">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl lg:max-w-6xl max-h-[95vh] flex flex-col transform transition-all">
+
+
                             {/* Modal Header */}
                             <div className="flex items-center justify-between p-6 border-b border-gray-200">
                                 <div className="flex items-center space-x-3">
@@ -1144,51 +1238,53 @@ const Students = () => {
                                         </div>
 
                                         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                                            <div className="overflow-x-auto max-h-96">
-                                                <table className="w-full text-sm">
-                                                    <thead className="bg-gray-50 sticky top-0">
-                                                        <tr>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Row</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Name</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Email</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Phone</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Course</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
-                                                            <th className="px-4 py-3 text-left font-semibold text-gray-900">Errors</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-200">
-                                                        {previewData.data.map((row, index) => (
-                                                            <tr key={index} className={row.errors.length > 0 ? 'bg-red-50' : 'bg-green-50'}>
-                                                                <td className="px-4 py-3">{row.rowNumber}</td>
-                                                                <td className="px-4 py-3">{row.fullName}</td>
-                                                                <td className="px-4 py-3">{row.email}</td>
-                                                                <td className="px-4 py-3">{row.phone}</td>
-                                                                <td className="px-4 py-3">{row.course}</td>
-                                                                <td className="px-4 py-3">
-                                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(row.status)}`}>
-                                                                        {row.status}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-4 py-3">
-                                                                    {row.errors.length > 0 ? (
-                                                                        <div className="space-y-1">
-                                                                            {row.errors.map((error, errorIndex) => (
-                                                                                <span key={errorIndex} className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
-                                                                                    {error}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="inline-flex items-center text-green-600">
-                                                                            <CheckCircle className="w-4 h-4" />
-                                                                        </span>
-                                                                    )}
-                                                                </td>
+                                            <div className="overflow-x-auto -mx-6 px-6">
+                                                <div className="max-h-96 overflow-y-auto">
+                                                    <table className="w-full text-sm min-w-[600px]">
+                                                        <thead className="bg-gray-50 sticky top-0">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Row</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Name</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Email</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Phone</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Course</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Status</th>
+                                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">Errors</th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-200">
+                                                            {previewData.data.map((row, index) => (
+                                                                <tr key={index} className={row.errors.length > 0 ? 'bg-red-50' : 'bg-green-50'}>
+                                                                    <td className="px-4 py-3">{row.rowNumber}</td>
+                                                                    <td className="px-4 py-3">{row.fullName}</td>
+                                                                    <td className="px-4 py-3">{row.email}</td>
+                                                                    <td className="px-4 py-3">{row.phone}</td>
+                                                                    <td className="px-4 py-3">{row.course}</td>
+                                                                    <td className="px-4 py-3">
+                                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(row.status)}`}>
+                                                                            {row.status}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-4 py-3">
+                                                                        {row.errors.length > 0 ? (
+                                                                            <div className="space-y-1">
+                                                                                {row.errors.map((error, errorIndex) => (
+                                                                                    <span key={errorIndex} className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
+                                                                                        {error}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="inline-flex items-center text-green-600">
+                                                                                <CheckCircle className="w-4 h-4" />
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1297,6 +1393,7 @@ const Students = () => {
                         </div>
                     </div>
                 )}
+
             </div>
         </div>
     );
